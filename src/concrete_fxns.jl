@@ -29,25 +29,33 @@ function fxn_eval(this::ENormSquaredViaLinMapImplicit, x::AbstractVector)::Numbe
     return (1/2)*dot(x, grad(this, x) - this.c) + this.d
 end
 
+function gradient_to_fxnval(this::ENormSquaredViaLinMapImplicit, y::AbstractVector)::Number
+    return (1/2)*dot(y, y - this.c) + this.d
+end
+
 
 # ==============================================================================
 # NONSMOOTH FUNCTIONS
 # ==============================================================================
 
-
+"""
+A non-smooth function that is literally all zero, and it does nothing 
+mathematically.
+"""
 struct ZeroFunction <: NsmoothFxn
     function ZeroFunction()
         return new()
     end
 end
 
-function fxn_eval(::AbstractArray)::Number
+function fxn_eval(::ZeroFunction, ::AbstractArray)::Number
     return 0
 end
 
 function prox(::ZeroFunction, ::Number, x::AbstractArray)
     return x
 end
+
 
 """
 Indicator function of the Positive Cone. 

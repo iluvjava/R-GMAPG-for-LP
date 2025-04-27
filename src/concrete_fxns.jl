@@ -16,7 +16,7 @@ struct ENormSquaredViaLinMapImplicit <: SmoothFxn
         lin_map_adj::Function, 
         b::AbstractVector
     )  
-        new(lin_map, lin_map_adj, (1/2)*dot(b,b), lin_map_adj(b))
+        new(lin_map, lin_map_adj, dot(b,b), lin_map_adj(b))
     end
 
 end
@@ -26,11 +26,15 @@ function grad(this::ENormSquaredViaLinMapImplicit, x::AbstractVector)::AbstractV
 end
 
 function fxn_eval(this::ENormSquaredViaLinMapImplicit, x::AbstractVector)::Number
-    return (1/2)*dot(x, grad(this, x) - this.c) + this.d
+    return (1/2)*(dot(x, grad(this, x) - this.c) + this.d)
 end
 
-function gradient_to_fxnval(this::ENormSquaredViaLinMapImplicit, y::AbstractVector)::Number
-    return (1/2)*dot(y, y - this.c) + this.d
+function gradient_to_fxnval(
+    this::ENormSquaredViaLinMapImplicit, 
+    x::AbstractVector, 
+    g::AbstractVector
+)::Number
+    return (1/2)*(dot(x, g - this.c) + this.d)
 end
 
 

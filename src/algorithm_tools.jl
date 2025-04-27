@@ -31,6 +31,10 @@ function monotone(this::AlgoSettings)::Int
     return this.monotone
 end
 
+function restart(this::AlgoSettings)::Int
+    return this.restart
+end
+
 """
 An objects for collecting the parameters while the algorithm is running. 
 """

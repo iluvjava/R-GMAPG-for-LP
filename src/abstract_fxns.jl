@@ -30,7 +30,7 @@ abstract type SmoothFxn end
 """
 Evaluate both gradient and function value at x. 
 """
-function fxn_eval(::SmoothFxn, ::AbstractArray)::Tuple
+function fxn_eval(::SmoothFxn, ::AbstractArray)::Number
     throw("Not implemented.")
 end
 

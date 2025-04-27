@@ -6,13 +6,13 @@ include("algorithms.jl")
 using Plots, Test, LinearAlgebra
 
 @testset "Basic Testing" begin
-    global N = 64
-    global A = Diagonal(LinRange(0, 1, N))
+    global N = 8
+    global A = Diagonal(LinRange(1e-2, 1, N))
     global f = ENormSquaredViaLinMapImplicit((x) ->(A*x), (y) -> (A'y), zeros(N))
     x0 = randn(N)
     g = ZeroFunction()
     max_itr=10000
-    tol=1e-12
+    tol=1e-18
 
     function visualize_results(c::ResultsCollector)::Nothing
 
@@ -87,6 +87,13 @@ plt2 = plot(
     title="Lip",
     dpi=400
 )
+plt3 = plot(
+    1:(RESULTS1|>gradmap_values|>length),
+    RESULTS1|>gradmap_values.|>(x -> max(-53, x)|> log2), 
+    label="Armijo LS",
+    title="Normed Gradieng Mapping", 
+    dpi=400
+)
 # RESULT 2
 plot!(
     plt1,
@@ -94,11 +101,18 @@ plot!(
     RESULTS2|>fxn_values.|>(x -> max(-53, x)|> log2), 
     label="BT", 
 )
-plot!(
+ plot!(
     plt2,
     1:(RESULTS2|>lipschitz_estimates|>length),
     RESULTS2|>lipschitz_estimates.|>(x -> max(-53, x)|> log2), 
     label="BT"
+)
+plot!(
+    plt3,
+    1:(RESULTS2|>gradmap_values|>length),
+    RESULTS2|>gradmap_values.|>(x -> max(-53, x)|> log2), 
+    label="BT",
+    dpi=400
 )
 # RESULT 3
 plot!(
@@ -113,6 +127,13 @@ plot!(
     RESULTS3|>lipschitz_estimates.|>(x -> max(-53, x)|> log2), 
     label="B'Mono | Armijo"
 )
+plot!(
+    plt3, 
+    1:(RESULTS3|>gradmap_values|>length),
+    RESULTS3|>gradmap_values.|>(x -> max(-53, x)|> log2), 
+    label="B'Mono | Armijo",
+    dpi=400
+)
 # RESULT 4
 plot!(
     plt1,
@@ -125,6 +146,13 @@ plot!(
     1:(RESULTS4|>lipschitz_estimates|>length),
     RESULTS4|>lipschitz_estimates.|>(x -> max(-53, x)|> log2), 
     label="B'Mono | BT"
+)
+plot!(
+    plt3, 
+    1:(RESULTS4|>gradmap_values|>length),
+    RESULTS4|>gradmap_values.|>(x -> max(-53, x)|> log2), 
+    label="B'Mono | BT",
+    dpi=400
 )
 # RESULTS 5
 plot!(
@@ -139,5 +167,14 @@ plot!(
     RESULTS5|>lipschitz_estimates.|>(x -> max(-53, x)|> log2), 
     label="N'Mono | BT"
 )
+plot!(
+    plt3,
+    1:(RESULTS5|>gradmap_values|>length),
+    RESULTS5|>gradmap_values.|>(x -> max(-53, x)|> log2), 
+    label="N'Mono | BT",
+    dpi=400
+)
+
 plt1|>display
 plt2|>display
+plt3|>display

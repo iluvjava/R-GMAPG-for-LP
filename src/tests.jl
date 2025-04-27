@@ -6,13 +6,13 @@ include("algorithms.jl")
 using Plots, Test, LinearAlgebra
 
 @testset "Basic Testing" begin
-    global N = 8
-    global A = Diagonal(LinRange(1e-2, 1, N))
+    global N = 32
+    global A = Diagonal(LinRange(0, 1, N))
     global f = ENormSquaredViaLinMapImplicit((x) ->(A*x), (y) -> (A'y), zeros(N))
     x0 = randn(N)
     g = ZeroFunction()
-    max_itr=10000
-    tol=1e-18
+    max_itr=2^16
+    tol=1e-10
 
     function visualize_results(c::ResultsCollector)::Nothing
 
@@ -26,40 +26,39 @@ using Plots, Test, LinearAlgebra
     end 
 
     function basic_run_armijo()
-        @info "FISTA | Armjio "
-        global RESULTS1 = fista(f, g, x0, max_itr=max_itr, tol=tol)
-        
+        @info "Armjio "
+        @time global RESULTS1 = fista(f, g, x0, max_itr=max_itr, tol=tol)
         return true
     end
 
     function basic_run_backtrack()
-        @info "FISTA | Chambolle's backtrack"
+        @info "Chambolle's backtrack"
         s = AlgoSettings(line_search_strategy=1)
-        global RESULTS2 = fista(f, g, x0, max_itr=max_itr, tol=tol, alg_settings=s)
+        @time global RESULTS2 = fista(f, g, x0, max_itr=max_itr, tol=tol, alg_settings=s)
         
         return true
     end
 
     function basic_run_armijo_beckmono()
-        @info "N'MFISTA | Armijo | Bekc's Mono"
+        @info "Armijo | Bekc's Mono"
         s = AlgoSettings(line_search_strategy=0, monotone_strategy=1)
-        global RESULTS3 = fista(f, g, x0, max_itr=max_itr, alg_settings=s, tol=tol)
+        @time global RESULTS3 = fista(f, g, x0, max_itr=max_itr, alg_settings=s, tol=tol)
        
         return true
     end
 
     function basic_run_backtrack_beckmono()
-        @info "MFISTA | Chambolle's Backtrack | Beck's Monotone"
+        @info "Chambolle's Backtrack | Beck's Monotone"
         s = AlgoSettings(line_search_strategy=1, monotone_strategy=1)
-        global RESULTS4 = fista(f, g, x0, max_itr=max_itr, alg_settings=s, tol=tol)
+        @time global RESULTS4 = fista(f, g, x0, max_itr=max_itr, alg_settings=s, tol=tol)
         
         return true
     end
 
     function basic_run_backtrack_nesmono()
-        @info "MFISTA | Chambolle's Backtrack | Nesterov's Monotone"
+        @info "Chambolle's Backtrack | Nesterov's Monotone"
         s = AlgoSettings(line_search_strategy=1, monotone_strategy=2)
-        global RESULTS5 = fista(f, g, x0, max_itr=max_itr, alg_settings=s, tol=tol)
+        @time global RESULTS5 = fista(f, g, x0, max_itr=max_itr, alg_settings=s, tol=tol)
         
         return true
     end

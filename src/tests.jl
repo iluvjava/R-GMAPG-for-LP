@@ -6,13 +6,13 @@ include("algorithms.jl")
 using Plots, Test, LinearAlgebra
 
 @testset "Basic Testing" begin
-    global N = 32
-    global A = Diagonal(LinRange(0, 1, N))
-    global f = ENormSquaredViaLinMapImplicit((x) ->(A*x), (y) -> (A'y), zeros(N))
+    global N = 128
+    global A = Diagonal(LinRange(0.01, 1, N))
+    global f = ENormSquaredViaLinMapImplicit((x) ->(A*x), (y) -> (A'y), randn(N))
     x0 = randn(N)
     g = ZeroFunction()
-    max_itr=2^16
-    tol=1e-10
+    max_itr=2^14
+    tol=1e-8
 
     function visualize_results(c::ResultsCollector)::Nothing
 
@@ -27,7 +27,8 @@ using Plots, Test, LinearAlgebra
 
     function basic_run_armijo()
         @info "Armjio "
-        @time global RESULTS1 = fista(f, g, x0, max_itr=max_itr, tol=tol)
+        s = AlgoSettings(restart_strategy=1)
+        @time global RESULTS1 = fista(f, g, x0, max_itr=max_itr, tol=tol, alg_settings=s)
         return true
     end
 
@@ -75,20 +76,20 @@ end
 # RESULT 1
 plt1 = plot(
     1:(RESULTS1|>fxn_values|>length),
-    RESULTS1|>fxn_values.|>(x -> max(-53, x)|> log2), 
+    RESULTS1|>fxn_values.|>(x -> max(1e-307, x)|> log2), 
     title="Fxn", 
     label="Armijo LS", 
     dpi=400
 )
 plt2 = plot(
     1:(RESULTS1|>lipschitz_estimates|>length),
-    RESULTS1|>lipschitz_estimates.|>(x -> max(-53, x)|> log2), 
+    RESULTS1|>lipschitz_estimates.|>(x -> max(1e-307, x)|> log2), 
     title="Lip",
     dpi=400
 )
 plt3 = plot(
     1:(RESULTS1|>gradmap_values|>length),
-    RESULTS1|>gradmap_values.|>(x -> max(-53, x)|> log2), 
+    RESULTS1|>gradmap_values.|>(x -> max(1e-307, x)|> log2), 
     label="Armijo LS",
     title="Normed Gradieng Mapping", 
     dpi=400
@@ -97,19 +98,19 @@ plt3 = plot(
 plot!(
     plt1,
     1:(RESULTS2|>fxn_values|>length),
-    RESULTS2|>fxn_values.|>(x -> max(-53, x)|> log2), 
+    RESULTS2|>fxn_values.|>(x -> max(1e-307, x)|> log2), 
     label="BT", 
 )
  plot!(
     plt2,
     1:(RESULTS2|>lipschitz_estimates|>length),
-    RESULTS2|>lipschitz_estimates.|>(x -> max(-53, x)|> log2), 
+    RESULTS2|>lipschitz_estimates.|>(x -> max(1e-307, x)|> log2), 
     label="BT"
 )
 plot!(
     plt3,
     1:(RESULTS2|>gradmap_values|>length),
-    RESULTS2|>gradmap_values.|>(x -> max(-53, x)|> log2), 
+    RESULTS2|>gradmap_values.|>(x -> max(1e-307, x)|> log2), 
     label="BT",
     dpi=400
 )
@@ -117,19 +118,19 @@ plot!(
 plot!(
     plt1,
     1:(RESULTS3|>fxn_values|>length),
-    RESULTS3|>fxn_values.|>(x -> max(-53, x)|> log2), 
+    RESULTS3|>fxn_values.|>(x -> max(1e-307, x)|> log2), 
     label="B'Mono | Armijo"
 )
 plot!(
     plt2,
     1:(RESULTS3|>lipschitz_estimates|>length),
-    RESULTS3|>lipschitz_estimates.|>(x -> max(-53, x)|> log2), 
+    RESULTS3|>lipschitz_estimates.|>(x -> max(1e-307, x)|> log2), 
     label="B'Mono | Armijo"
 )
 plot!(
     plt3, 
     1:(RESULTS3|>gradmap_values|>length),
-    RESULTS3|>gradmap_values.|>(x -> max(-53, x)|> log2), 
+    RESULTS3|>gradmap_values.|>(x -> max(1e-307, x)|> log2), 
     label="B'Mono | Armijo",
     dpi=400
 )
@@ -137,19 +138,19 @@ plot!(
 plot!(
     plt1,
     1:(RESULTS4|>fxn_values|>length),
-    RESULTS4|>fxn_values.|>(x -> max(-53, x)|> log2), 
+    RESULTS4|>fxn_values.|>(x -> max(1e-307, x)|> log2), 
     label="B'Mono | BT"
 )
 plot!(
     plt2,
     1:(RESULTS4|>lipschitz_estimates|>length),
-    RESULTS4|>lipschitz_estimates.|>(x -> max(-53, x)|> log2), 
+    RESULTS4|>lipschitz_estimates.|>(x -> max(1e-307, x)|> log2), 
     label="B'Mono | BT"
 )
 plot!(
     plt3, 
     1:(RESULTS4|>gradmap_values|>length),
-    RESULTS4|>gradmap_values.|>(x -> max(-53, x)|> log2), 
+    RESULTS4|>gradmap_values.|>(x -> max(1e-307, x)|> log2), 
     label="B'Mono | BT",
     dpi=400
 )
@@ -157,19 +158,19 @@ plot!(
 plot!(
     plt1, 
     1:(RESULTS5|>fxn_values|>length),
-    RESULTS5|>fxn_values.|>(x -> max(-53, x)|> log2), 
+    RESULTS5|>fxn_values.|>(x -> max(1e-307, x)|> log2), 
     label="N'Mono | BT "
 )
 plot!(
     plt2, 
     1:(RESULTS5|>lipschitz_estimates|>length),
-    RESULTS5|>lipschitz_estimates.|>(x -> max(-53, x)|> log2), 
+    RESULTS5|>lipschitz_estimates.|>(x -> max(1e-307, x)|> log2), 
     label="N'Mono | BT"
 )
 plot!(
     plt3,
     1:(RESULTS5|>gradmap_values|>length),
-    RESULTS5|>gradmap_values.|>(x -> max(-53, x)|> log2), 
+    RESULTS5|>gradmap_values.|>(x -> max(1e-307, x)|> log2), 
     label="N'Mono | BT",
     dpi=400
 )

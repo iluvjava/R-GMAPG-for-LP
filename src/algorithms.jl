@@ -143,7 +143,7 @@ function inner_fista_runner(
         L = L⁺
         L̄ = max(L, L̄); G = L*norm(x⁺ - y⁺)
         v⁺ .= x + (1/α)*(x⁺ - x)
-        # Monotone enhancement here. ---------------------------------------
+        # Monotone enhancement here. -------------------------------------------
         if alg_settings|>monotone == 1
             F⁺ = gradient_to_fxnval(f, x⁺, xg⁺) + g(x⁺)
             if F⁺ > F + ϵ
@@ -172,7 +172,6 @@ function inner_fista_runner(
         put_results!(results_collector, G, x⁺, α, L, fxn_val=F⁺)
         
         # check restart conditions here ----------------------------------------
-        
         if alg_settings|>restart == 0
             restart_cond_met = G < tol
         elseif alg_settings|>restart == 1
@@ -203,6 +202,9 @@ function inner_fista_runner(
 
     return F, x, G, k
 end
+
+
+
 
 """
 FISTA, specialized for squared norm composite of linear mapping. 
@@ -263,12 +265,10 @@ function fista(
                 end
             end
         end
-
         if G < tol           
             break
         end
     end
-    
     return results_collector
 end
 

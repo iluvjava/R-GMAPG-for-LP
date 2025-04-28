@@ -101,12 +101,13 @@ end
 function proj(this::IndicConeCrossed, x::AbstractArray)::AbstractArray
     n1 = this.n1
     n3 = this.n3
-    x1 = view(x, 1:n1-1)
-    x3 = view(x, n2:n3-1) 
+    x1 = view(x, 1:n1)
+    x3 = view(x, n1+n2:n1+n2+n3) 
     y1 = max.(x1, 0)
     y3 = -max.(-x3, 0)
     return vcat(y1, x2, y3)
 end
+
 
 """
 x |-> λ|x|

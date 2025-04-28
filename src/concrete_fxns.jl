@@ -8,25 +8,26 @@ f(x) = (1/2)<x, ∇f(x) - A^Tb> + 1/2‖d‖^2
 struct ENormSquaredViaLinMapImplicit <: SmoothFxn
     linMap::Function
     linMapAdjoin::Function
-    d::Number
-    c::AbstractVector
+    d::Number # ‖b‖^2
+    c::AbstractVector # A^T b
+    b::AbstractVector
     
     function ENormSquaredViaLinMapImplicit(
         lin_map::Function, 
         lin_map_adj::Function, 
         b::AbstractVector
     )  
-        new(lin_map, lin_map_adj, dot(b,b), lin_map_adj(b))
+        new(lin_map, lin_map_adj, dot(b,b), lin_map_adj(b), b)
     end
 
 end
 
 function grad(this::ENormSquaredViaLinMapImplicit, x::AbstractVector)::AbstractVector
-    return this.linMapAdjoin(this.linMap(x)) - this.c
+    return this.linMapAdjoin(this.linMap(x) - this.b)
 end
 
 function fxn_eval(this::ENormSquaredViaLinMapImplicit, x::AbstractVector)::Number
-    return (1/2)*(dot(x, grad(this, x) - this.c) + this.d)
+    return (1/2)*(dot(x, grad(this, x)) - dot(x, this.c) + this.d)
 end
 
 function gradient_to_fxnval(
@@ -34,7 +35,12 @@ function gradient_to_fxnval(
     x::AbstractVector, 
     g::AbstractVector
 )::Number
-    return (1/2)*(dot(x, g - this.c) + this.d)
+    return (1/2)*(dot(x, g) - dot(x, this.c) + this.d)
+end
+
+
+struct FastENormSquared <:FastSmoothFxn
+
 end
 
 

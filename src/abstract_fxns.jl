@@ -49,3 +49,23 @@ function (this::SmoothFxn)(x::AbstractArray)::Number
 end
 
 
+abstract type FastSmoothFxn <: SmoothFxn end
+
+"""
+Mutable the assigned reference to an abstract array to compute the 
+gradient. This saves cg time. 
+"""
+function grad!(::FastSmoothFxn, ::AbstractArray, ::AbstractArray)
+    throw("Not implemented.")
+end
+
+
+abstract type FastNsmoothFxn <: NsmoothFxn end
+
+"""
+Mutable the assigned reference to an abstract array to compute the 
+prox. This saves cg time. 
+"""
+function prox!(::FastNsmoothFxn, ::AbstractArray, ::AbstractArray)
+    throw("Not implemented.")
+end

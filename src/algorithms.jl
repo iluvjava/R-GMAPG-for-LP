@@ -65,7 +65,7 @@ function backtrack_ls!(
     xg_plus::AbstractArray,
     yg_plus::AbstractArray;
     l_min::Number,
-    r::Number=2^(-1/1024)
+    r::Number
 )::Tuple
     L⁺ = max(L*r, l_min)
     α = alpha
@@ -103,12 +103,14 @@ function inner_fista_runner(
     tol::Number
 ):: NTuple{4, Any}
     ls = alg_settings|>line_search == 0 ? armijo_ls! : backtrack_ls!
+    ϵ = 4*eps(typeof(x0[1]))
     L̄ = L
+    ρ = 2^(-1/1024)
     x⁺ = similar(x0); y⁺ = similar(x0)
     x = similar(x0); y = similar(x0)
     xg⁺ = similar(x0); yg⁺ = similar(x0)
     xg = similar(x0); yg = similar(x0)
-    v = similar(x0)
+    v = similar(x0); v⁺ = similar(x0)
     
     # First iterates is just a proximal gradient step --------------------------
     if results_collector|> fxn_collect || 
@@ -121,41 +123,42 @@ function inner_fista_runner(
         initial_results!(results_collector, x0)
     end
     (L, _) = armijo_ls!(f, g, L, 0, x0, x0, x, y, xg, yg)
-    v = x
+    v .= x
     if results_collector|> fxn_collect
         F = gradient_to_fxnval(f, x, xg) + g(x)
     end
-    initial_results!(results_collector, x, F)
-    
-    # restart related parameters -------------------------------------------
-    k = 0; restart_cond_met = false
-    F0 = F; G = L*(x - x0)
-    α = 1
+    α = 1; k = 0
+    G = L*norm(x - x0)
+    put_results!(results_collector, G, x, α ,L, fxn_val=F)
+    restart_cond_met = false
+    Fs = results_collector.fxn_values
     while !restart_cond_met && M >= 0
         k += 1
         M -= 1
-        (L, α) = ls(
+        (L⁺, α) = ls(
             f, g, L, α, v, x, x⁺, y⁺, xg⁺, yg⁺,
-            l_min=r*L̄
+            l_min=r*L̄, r=ρ
         )
-        L̄ = max(2*L, L̄); G = L*norm(x⁺ - y⁺)
-        v .= x + (1/α)*(x⁺ - x)
+        ρ = L⁺>=L ? ρ^(1/2) : ρ # upadate BT relaxation parameter. 
+        L = L⁺
+        L̄ = max(L, L̄); G = L*norm(x⁺ - y⁺)
+        v⁺ .= x + (1/α)*(x⁺ - x)
         # Monotone enhancement here. ---------------------------------------
         if alg_settings|>monotone == 1
             F⁺ = gradient_to_fxnval(f, x⁺, xg⁺) + g(x⁺)
-            if F⁺ > F
-                x⁺ = x|>copy
+            if F⁺ > F + ϵ
+                x⁺ .= x
                 F⁺ = F
             end
         elseif alg_settings|>monotone == 2
             F⁺ = gradient_to_fxnval(f, x⁺ ,xg⁺) + g(x⁺)
-            if F < F⁺
-                x⁺ .= prox(g, 1/L̄, x - (1/L̄)*xg)
+            if F + ϵ < F⁺
+                x⁺ .= prox(g, 1/(2L̄), x - (1/(2L̄))*xg)
                 G = L̄*norm(x⁺ - x)
             else
-                x̂ = prox(g, 1/L̄, x⁺ - (1/L̄)*xg⁺)
-                G = L̄*norm(x⁺ - x̂)
-                x⁺ = x̂
+                x .= prox(g, 1/(2L̄), x⁺ - (1/(2L̄))*xg⁺)
+                G = L̄*norm(x⁺ - x)
+                x⁺ .= x
             end
             xg⁺ .= grad(f, x⁺)
             F⁺ = gradient_to_fxnval(f, x⁺, xg⁺) + g(x⁺)
@@ -169,10 +172,9 @@ function inner_fista_runner(
         put_results!(results_collector, G, x⁺, α, L, fxn_val=F⁺)
         
         # check restart conditions here ----------------------------------------
+        
         if alg_settings|>restart == 0
-            if G < tol
-                restart_cond_met = true
-            end
+            restart_cond_met = G < tol
         elseif alg_settings|>restart == 1
             if alg_settings|>monotone == 1
                 throw(
@@ -180,14 +182,22 @@ function inner_fista_runner(
                     " with Gradient heuristic based restart"
                 )
             end
-            if dot(x⁺ - y⁺, x - x⁺) > 0 && k > N
-                restart_cond_met = true
-            end
+            restart_cond_met = dot(x⁺ - y⁺, x - x⁺) > 0 && k > N
         else
-            throw("Not implemeneted")
+            m = k - (floor(k/2)|>Int) - 1
+            
+            restart_cond_met = k >= N &&
+            (Fs[end - m] - Fs[end])/(Fs[end - k] - Fs[end - m]) <= exp(-1) &&
+            F⁺ <= Fs[end - k]
+            if restart_cond_met
+                println("Fx restart with k = $k")
+            end
         end
-        yg = yg⁺|>copy; xg = xg⁺|>copy
-        x = x⁺|>copy; y = y⁺|>copy
+        x, x⁺ = x⁺, x
+        y, y⁺ = y⁺, y
+        v, v⁺ = v⁺, v
+        xg, xg⁺ = xg⁺, xg
+        yg, yg⁺ = yg⁺, yg
         F = F⁺
     end
 
@@ -204,15 +214,17 @@ function fista(
     L::Number=1,
     alg_settings::AlgoSettings=AlgoSettings(), 
     results_collector::ResultsCollector=ResultsCollector(),
-    min_ratio=0.2,
+    min_ratio=0.1,
     max_itr::Number=1000,
     tol::Number=1e-8
 )::ResultsCollector 
     # MUTATING VARS
     
     M = max_itr
-    N = 10 # minimum restart period. 
+    N = 128 # initial minimum restart period. 
     z = x0
+    j = 0
+    R = Vector{Number}()
     while M >= 0
         if alg_settings|>restart == 0
             F, z, G, k = inner_fista_runner( 
@@ -229,11 +241,27 @@ function fista(
                 results_collector, 
                 tol
             )
-            println("rs period: $k")
             M -= k
             N = max(N, k)
         else
-            throw("Not implemeneted")
+            F, z, G, k = inner_fista_runner( 
+                f, g, z, L, min_ratio, N, M, alg_settings,
+                results_collector, 
+                tol
+            )
+            M -= k
+            if j == 0                
+                N = max(N, k)
+                j += 1
+                push!(R, F)
+                push!(R, results_collector.fxn_values[1])
+            else 
+                push!(R, F)
+                if (R[end - 1] - R[end])/(R[end - 2] - R[end - 1]) > exp(-1)
+                    N *= 2
+                    println("Restart Strategy 2, period updated to $N. ")
+                end
+            end
         end
 
         if G < tol           

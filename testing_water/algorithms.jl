@@ -245,5 +245,54 @@ function fista(
 end
 
 
-function fista_restart()
+"""
+A dead simple FISTA for Sanity check. 
+"""
+function fista_sanity_check(
+    f::ENormSquaredViaLinMapImplicit, 
+    g::NsmoothFxn, 
+    x0::AbstractArray;
+    L::Number=1,
+    alg_settings::AlgoSettings=AlgoSettings(), 
+    results_collector::ResultsCollector=ResultsCollector(),
+    max_itr::Number=1000,
+    tol::Number=1e-8
+)
+    M = max_itr
+    x⁺ = similar(x0); y⁺ = similar(x0)
+    x = similar(x0); y = similar(x0)
+    xg⁺ = similar(x0); yg⁺ = similar(x0)
+    xg = similar(x0); yg = similar(x0)
+    v = similar(x0); v⁺ = similar(x0)
+
+    # First iterates is just a proximal gradient step --------------------------
+    if results_collector|> fxn_collect
+        F = f(x0) + g(x0)
+    end
+    initial_results!(results_collector, x0, F)
+    (L, _) = armijo_ls!(f, g, L, 0, x0, x0, x, y, xg, yg)
+    v = x
+    if results_collector|> fxn_collect
+        F = gradient_to_fxnval(f, x, xg) + g(x)
+    end
+    α = 1
+    G = norm(L*(x - x0))
+    put_results!(results_collector, G, x, α, L, fxn_val=F)
+    while M >= 0 
+        M -= 1
+        (L, α) = armijo_ls!(f, g, L, α, v, x, x⁺, y⁺, xg⁺, yg⁺)
+        G = L*norm(x⁺ - y⁺)
+        v⁺ = x + (1/α)*(x⁺ - x)
+        F⁺ = gradient_to_fxnval(f, x⁺, xg⁺) + g(x⁺)
+        put_results!(results_collector, G, x⁺, α, L, fxn_val=F⁺)
+        if G < tol
+            break
+        end
+        x, x⁺ = x⁺, x
+        y, y⁺ = y⁺, y
+        v, v⁺ = v⁺, v
+        F = F⁺
+    end
+    
+    return results_collector
 end

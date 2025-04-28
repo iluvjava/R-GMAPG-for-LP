@@ -6,13 +6,13 @@ include("algorithms.jl")
 using Plots, Test, LinearAlgebra
 
 @testset "Basic Testing" begin
-    global N = 128
-    global A = Diagonal(LinRange(0.01, 1, N))
+    global N = 1024
+    global A = Diagonal(LinRange(1e-3, 1, N))
     global f = ENormSquaredViaLinMapImplicit((x) ->(A*x), (y) -> (A'y), randn(N))
     x0 = randn(N)
     g = ZeroFunction()
-    max_itr=2^14
-    tol=1e-8
+    max_itr=2^16
+    tol=1e-14
 
     function visualize_results(c::ResultsCollector)::Nothing
 
@@ -27,8 +27,8 @@ using Plots, Test, LinearAlgebra
 
     function basic_run_armijo()
         @info "Armjio "
-        s = AlgoSettings(restart_strategy=1)
-        @time global RESULTS1 = fista(f, g, x0, max_itr=max_itr, tol=tol, alg_settings=s)
+        s = AlgoSettings()
+        @time global RESULTS1 = fista_sanity_check(f, g, x0, max_itr=max_itr, tol=tol, alg_settings=s)
         return true
     end
 
@@ -84,7 +84,7 @@ plt1 = plot(
 plt2 = plot(
     1:(RESULTS1|>lipschitz_estimates|>length),
     RESULTS1|>lipschitz_estimates.|>(x -> max(1e-307, x)|> log2), 
-    title="Lip",
+    title="Lip", label="FISTA | Sanity Check",
     dpi=400
 )
 plt3 = plot(

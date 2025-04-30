@@ -6,14 +6,14 @@ include("algorithms.jl")
 using Plots, Test, LinearAlgebra
 
 @testset "Basic Testing" begin
-    global N = 256^2
-    global A = LinRange(0, 1, N)|>collect
-    global b = zeros(N)
-    global f = ENormSquaredViaLinMapImplicit(x -> A.*x, y -> A.*y, b)
-    x0 = randn(N)
+    global N = 1024
+    global A = LinRange(1/N, 1, N)|>collect
+    global b = ones(N); b[1] = 0
+    global f = ImplicitAffineNormedSquared(x -> A.*x, y -> A.*y, b)
+    x0 = A|>reverse
     g = ZeroFunction()
-    max_itr=2^14
-    tol=2^(-25)
+    max_itr = 2^16
+    tol = 2^(-20)
 
     function visualize_results(c::ResultsCollector)::Nothing
 
@@ -173,8 +173,6 @@ using Plots, Test, LinearAlgebra
     @test basic_run_backtrack_nesmono()
     
 end
-
-
 
 
 plt1|>display

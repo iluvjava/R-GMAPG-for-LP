@@ -91,7 +91,6 @@ end
 function put_results!(
     this::ResultsCollector, 
     gradmap_values::Number, 
-    last_iterate::AbstractArray,
     alpha::Number, 
     lipschitz_estimates::Number; 
     fxn_val::Number=NaN
@@ -100,14 +99,22 @@ function put_results!(
         push!(this.fxn_values, fxn_val)
     end
     push!(this.gradmap_values, gradmap_values)
-    this.last_iterate = last_iterate
     push!(this.alpha_sequence, alpha)
     push!(this.lipschitz_estimates, lipschitz_estimates)
     return nothing
 end
 
-function exit_flag!(this::ResultsCollector, flag::Int)
+function exit_flag!(
+    this::ResultsCollector, flag::Int
+)::Nothing
     this.termination_code = flag
+    return nothing
+end
+
+function last_iterate!(
+    this::ResultsCollector, last_iterate::AbstractArray
+)::Nothing
+    this.last_iterate = last_iterate
     return nothing
 end
 

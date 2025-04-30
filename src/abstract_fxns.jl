@@ -1,14 +1,23 @@
 abstract type NsmoothFxn end
 
-function fxn_eval(::NsmoothFxn, ::AbstractArray)::Number
+function fxn_eval(
+    ::NsmoothFxn, 
+    ::AbstractArray{Float64}
+)::Float64
     throw("Not Implemented. ")
 end
 
-function prox(::NsmoothFxn, ::Number, ::AbstractArray)::AbstractArray
+function prox(
+    ::NsmoothFxn, 
+    ::Number, 
+    ::AbstractArray{Float64}
+)::AbstractArray{Float64}
     throw("Not Implemented. ")
 end
 
-function (this::NsmoothFxn)(x::AbstractArray)::Number
+function (this::NsmoothFxn)(
+    x::AbstractArray{Float64}
+)::Float64
     return fxn_eval(this, x)
 end
 
@@ -16,11 +25,18 @@ end
 abstract type IndicFxn <: NsmoothFxn
 end
 
-function proj(::IndicFxn, ::AbstractArray)::AbstractArray
+function proj(
+    ::IndicFxn, 
+    ::AbstractArray{Float64}
+)::AbstractArray{Float64}
     throw("Not Implemented. ")
 end
 
-function prox(this::IndicFxn, ::Number, ::AbstractArray)::AbstractArray
+function prox(
+    this::IndicFxn, 
+    ::Number, 
+    ::AbstractArray{Float64}
+)::AbstractArray{Float64}
     return proj(this, x)
 end
 
@@ -30,21 +46,24 @@ abstract type SmoothFxn end
 """
 Evaluate both gradient and function value at x. 
 """
-function fxn_eval(::SmoothFxn, ::AbstractArray)::Number
+function fxn_eval(
+    ::SmoothFxn, 
+    ::AbstractArray{Float64}
+)::Float64
     throw("Not implemented.")
 end
 
 """
 Get the gradient at x. 
 """
-function grad(::SmoothFxn, ::AbstractArray)::AbstractArray
+function grad(::SmoothFxn, ::AbstractArray{Float64})::AbstractArray{Float64}
     throw("Not implemeneted. ")
 end
 
 """
 Get the function value at x. 
 """
-function (this::SmoothFxn)(x::AbstractArray)::Number
+function (this::SmoothFxn)(x::AbstractArray{Float64})::Float64
     return fxn_eval(this, x)
 end
 
@@ -55,7 +74,7 @@ abstract type FastSmoothFxn <: SmoothFxn end
 Mutable the assigned reference to an abstract array to compute the 
 gradient. This saves cg time. 
 """
-function grad!(::FastSmoothFxn, ::AbstractArray, ::AbstractArray)
+function grad!(::FastSmoothFxn, ::AbstractArray, ::AbstractArray)::AbstractArray{Float64}
     throw("Not implemented.")
 end
 
@@ -66,6 +85,11 @@ abstract type FastNsmoothFxn <: NsmoothFxn end
 Mutable the assigned reference to an abstract array to compute the 
 prox. This saves cg time. 
 """
-function prox!(::FastNsmoothFxn, ::AbstractArray, ::AbstractArray)
+function prox!(
+    ::FastNsmoothFxn, 
+    ::Number,
+    ::AbstractArray{Float64}, 
+    ::AbstractArray{Float64}
+)::AbstractArray{Float64}
     throw("Not implemented.")
 end

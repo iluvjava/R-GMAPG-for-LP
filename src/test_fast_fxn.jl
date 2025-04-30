@@ -11,19 +11,19 @@ using Plots, Test, LinearAlgebra
 GC.enable_logging(false)
 
 @testset "Fast Functions Interface and Implementations" begin 
-    global N = 256
-    global A = LinRange(1/N, 1, N)|>collect
+    global N = 1024
+    global A = randn(N, N)
     global b = randn(N)
-    global f1 = ImplicitAffineNormedSquared(x -> A.*x, y -> A.*y, b)
-    global f2 = FastImplicitAffineNormedSquared(Diagonal(A), b)
+    global f1 = ImplicitAffineNormedSquared(x -> A*x, y -> A'*y, b)
+    global f2 = FastImplicitAffineNormedSquared(A, b)
     x0 = randn(N)
     g = ZeroFunction()
     max_itr = 2^16
-    tol = 2^(-25)
+    tol = 2^(-20)
 
     function SanityFISTAAmijoSlowImplementations()
         @info "RESULT 1 | FISTA  | Armijo LS | Slow Implementations "
-        s = AlgoSettings()
+        s = AlgoSettings(line_search_strategy=1)
         @time global RESULTS1 = fista_sanity_check(
             f1, g, x0, max_itr=max_itr, tol=tol, alg_settings=s
         )
@@ -52,8 +52,8 @@ GC.enable_logging(false)
     end
 
     function SanityFISTAAmijoFastImplementations()
-        @info "RESULT 1 | FISTA  | Armijo LS | Fast Implementations "
-        s = AlgoSettings()
+        @info "RESULT 2 | FISTA  | Armijo LS | Fast Implementations "
+        s = AlgoSettings(line_search_strategy=1)
         @time global RESULTS2 = fista_sanity_check(
             f2, g, x0, max_itr=max_itr, tol=tol, alg_settings=s
         )
@@ -82,6 +82,10 @@ GC.enable_logging(false)
             dpi=400
         )
         return true
+    end
+
+    function SanityFISTABTFastImplementations()
+        @info "RESULT 1 | FISTA  | BT | Fast Implementations "
     end
     
     @test SanityFISTAAmijoSlowImplementations()

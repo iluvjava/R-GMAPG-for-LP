@@ -4,6 +4,7 @@ function fxn_eval(
     ::NsmoothFxn, 
     ::AbstractArray{Float64}
 )::Float64
+    # IMPLEMENT THIS !
     throw("Not Implemented. ")
 end
 
@@ -12,7 +13,19 @@ function prox(
     ::Number, 
     ::AbstractArray{Float64}
 )::AbstractArray{Float64}
+    # IMPLEMENT THIS !
     throw("Not Implemented. ")
+end
+
+# Fast nonsmooth interface. 
+function prox!(
+    this::NsmoothFxn, 
+    l::Number, 
+    x::AbstractArray{Float64},
+    xx::AbstractArray{Float64}
+)::AbstractArray{Float64}
+    copy!(xx, prox(this, l, x))
+    return xx
 end
 
 function (this::NsmoothFxn)(
@@ -21,6 +34,7 @@ function (this::NsmoothFxn)(
     return fxn_eval(this, x)
 end
 
+# ------------------------------------------------------------------------------
 
 abstract type IndicFxn <: NsmoothFxn
 end
@@ -29,6 +43,7 @@ function proj(
     ::IndicFxn, 
     ::AbstractArray{Float64}
 )::AbstractArray{Float64}
+    # IMPLEMENT THIS !
     throw("Not Implemented. ")
 end
 
@@ -40,6 +55,7 @@ function prox(
     return proj(this, x)
 end
 
+# ------------------------------------------------------------------------------
 
 abstract type SmoothFxn end
 
@@ -50,14 +66,16 @@ function fxn_eval(
     ::SmoothFxn, 
     ::AbstractArray{Float64}
 )::Float64
+    # IMPLEMENT THIS !
     throw("Not implemented.")
 end
 
 """
 Get the gradient at x. 
 """
-function grad(::SmoothFxn, ::AbstractArray{Float64})::AbstractArray{Float64}
-    throw("Not implemeneted. ")
+function grad(this::SmoothFxn, ::AbstractArray{Float64})::AbstractArray{Float64}
+    # IMPLEMENT THIS !
+    throw("Not implemeneted for `$(typeof(this))`. ")
 end
 
 """
@@ -67,6 +85,19 @@ function (this::SmoothFxn)(x::AbstractArray{Float64})::Float64
     return fxn_eval(this, x)
 end
 
+# Interfacing with fast smooth function. 
+function grad!(
+    this::FastSmoothFxn, 
+    x::AbstractArray{Float64}, 
+    xx::AbstractArray{Float64}
+)::AbstractArray{Float64}
+    copy!(xx, grad(this, x))
+    return xx
+end
+
+# ==============================================================================
+# FAST ABSTRACT FUNCTIONS 
+# ==============================================================================
 
 abstract type FastSmoothFxn <: SmoothFxn end
 
@@ -74,10 +105,17 @@ abstract type FastSmoothFxn <: SmoothFxn end
 Mutable the assigned reference to an abstract array to compute the 
 gradient. This saves cg time. 
 """
-function grad!(::FastSmoothFxn, ::AbstractArray, ::AbstractArray)::AbstractArray{Float64}
+function grad!(
+    ::FastSmoothFxn, 
+    ::AbstractArray{Float64}, 
+    ::AbstractArray{Float64}
+)::AbstractArray{Float64}
+    # IMPLEMENT THIS !
+    
     throw("Not implemented.")
 end
 
+# ------------------------------------------------------------------------------
 
 abstract type FastNsmoothFxn <: NsmoothFxn end
 
@@ -91,5 +129,30 @@ function prox!(
     ::AbstractArray{Float64}, 
     ::AbstractArray{Float64}
 )::AbstractArray{Float64}
+    # IMPLEMENT THIS !
     throw("Not implemented.")
+end
+
+# ------------------------------------------------------------------------------
+
+abstract type FastIndicFxn <: FastNsmoothFxn
+
+end
+
+function proj!(
+    ::FastIndicFxn,
+    ::AbstractArray{Float64}, 
+    ::AbstractArray{Float64}
+)::AbstractArray{Float64}
+    # IMPLEMENT THIS !
+    throw("Not implemented.")
+end
+
+function prox!(
+    this::FastIndicFxn,
+    ::Number,
+    x::AbstractArray{Float64}, 
+    xx::AbstractArray{Float64}
+)::AbstractArray{Float64}
+    return proj!(this, x, xx)
 end

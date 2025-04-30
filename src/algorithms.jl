@@ -67,7 +67,6 @@ end
 
 
 
-
 """
 Specialize armijo line search routine for fast quadratic and nonsmooth
 functions. 
@@ -83,7 +82,7 @@ function armijo_ls!(
     y_plus::Vector{Float64},
     xg_plus::Vector{Float64},
     yg_plus::Vector{Float64}, 
-    temp_vec1::Vector{Float64},
+    z::Vector{Float64};
     kwargs...
 )::Tuple
     α = alpha  
@@ -91,20 +90,20 @@ function armijo_ls!(
     
     copy!(y_plus, v)  # y_plus .= v
     y_plus .*= α
-    copy!(temp_vec1, x); temp_vec1 .*= (1 - α)
-    y_plus .+= temp_vec1
+    copy!(z, x); z .*= (1 - α)
+    y_plus .+= z
     grad!(f, y_plus, yg_plus)
     for _ in 1:53
-        copy!(temp_vec1, yg_plus) # temp_vec1 .= yg_plus
-        temp_vec1 .*= -1/L
-        temp_vec1 .+= y_plus
-        prox!(g, 1/L, temp_vec1, x_plus)
+        copy!(z, yg_plus) # temp_vec1 .= yg_plus
+        z .*= -1/L
+        z .+= y_plus
+        prox!(g, 1/L, z, x_plus)
         grad!(f, x_plus, xg_plus)
         b = dot(yg_plus, y_plus) - dot(yg_plus, x_plus) - 
             dot(xg_plus, y_plus) + dot(xg_plus, x_plus)
-        copy!(temp_vec1, x_plus) 
-        temp_vec1 .-= y_plus
-        if b <= L*dot(temp_vec1, temp_vec1)
+        copy!(z, x_plus) 
+        z .-= y_plus
+        if b <= L*dot(z, z)
             break
         end
         L = 2*L
@@ -163,6 +162,55 @@ function backtrack_ls!(
     end
     return L⁺, α
 end
+
+
+function backtrack_ls!(
+    f::FastGenericQuadraticFunction, 
+    g::FastNsmoothFxn, 
+    L::Number, 
+    alpha::Number,
+    v::AbstractArray{Float64},
+    x::AbstractArray{Float64},
+    x_plus::AbstractArray{Float64}, 
+    y_plus::AbstractArray{Float64},
+    xg_plus::AbstractArray{Float64},
+    yg_plus::AbstractArray{Float64},
+    z::AbstractArray{Float64};  # for signaure consistency with fast implementations. 
+    l_min::Number,
+    r::Number
+)::Tuple
+    L⁺ = max(L*r, l_min)
+    α = alpha
+    y = y_plus; y′ = yg_plus
+    p = x_plus; p′ = xg_plus
+
+    for i in 0:53
+        α = (α*sqrt(α^2 + 4(L/L⁺)) - α^2)/2
+        # copy!(y, α*v + (1 - α)*x)
+        
+        copy!(z, v)
+        z .*= α
+        copy!(y, x)
+        y .*= (1 - α)
+        y .+= z
+        grad!(f, y, y′) # y′ <- ∇f(y)
+        copy!(z, y′)
+        z .*= -1/L⁺
+        z .+= y 
+        prox!(g, 1/L⁺, z, p) # p <- prox(g, p - ∇f(p)/L)
+        grad!(f, p, p′)  # p′ <- ∇f(p)
+        # b = dot(y′ - p′, y - p)
+        b = dot(y′, y) - dot(y′, p) - dot(p′, y) + dot(p′, p)
+        L⁺ = L⁺*2^i
+        copy!(z, p)
+        z .-= y;
+        if b <= L⁺*dot(z, z) # L⁺‖p - y‖^2
+            break
+        end
+    end
+    return L⁺, α
+end
+
 
 
 """
@@ -380,23 +428,26 @@ function fista_sanity_check(
     alg_settings::AlgoSettings=AlgoSettings(), 
     results_collector::ResultsCollector=ResultsCollector(),
     max_itr::Number=1000,
+    r::Number =0.3,
     tol::Number=1e-8
 )
+    ls = alg_settings|>line_search == 0 ? armijo_ls! : backtrack_ls!
     M = max_itr
     x⁺ = similar(x0); y⁺ = similar(x0)
     x = similar(x0); y = similar(x0)
     xg⁺ = similar(x0); yg⁺ = similar(x0)
     xg = similar(x0); yg = similar(x0)
     v = similar(x0); v⁺ = similar(x0)
-    temp1 = similar(x0)
-    temp2 = similar(x0)
+    z1 = similar(x0)
+    z2 = similar(x0)
+    ρ = 2^(-1/1024)
 
     # First iterates is just a proximal gradient step --------------------------
     if results_collector|> fxn_collect
         F = f(x0) + g(x0)
     end
     initial_results!(results_collector, x0, F)
-    (L, _) = armijo_ls!(f, g, L, 0, x0, x0, x, y, xg, yg, temp1)
+    (L, _) = armijo_ls!(f, g, L, 0, x0, x0, x, y, xg, yg, z1)
     copy!(v, x)
     if results_collector|> fxn_collect
         F = gradient_to_fxnval(f, x, xg) + g(x)
@@ -406,9 +457,14 @@ function fista_sanity_check(
     put_results!(results_collector, G, α, L, fxn_val=F)
     while M >= 0 
         M -= 1
-        (L, α) = armijo_ls!(f, g, L, α, v, x, x⁺, y⁺, xg⁺, yg⁺, temp1)
-        copy!(temp2, x⁺); temp2 .-= x
-        G = L*norm(temp2)
+        (L⁺, α) = ls(
+            f, g, L, α, v, x, x⁺, y⁺, xg⁺, yg⁺, z1,
+            l_min=r*L, r=ρ
+        )
+        ρ = L⁺>=L ? ρ^(1/2) : ρ # upadate BT relaxation parameter. 
+        L = L⁺
+        copy!(z2, x⁺); z2 .-= x
+        G = L*norm(z2)
         copy!(v⁺, x⁺) 
         v⁺ .-= x
         v⁺ .*= 1/α
@@ -417,7 +473,6 @@ function fista_sanity_check(
         F⁺ = gradient_to_fxnval(f, x⁺, xg⁺) + g(x⁺)
         put_results!(results_collector, G, α, L, fxn_val=F⁺)
         if G < tol
-            
             break
         end
         x, x⁺ = x⁺, x  # ref swapping. 

@@ -129,6 +129,7 @@ struct DistToAffineSpaceSquared <: FastNsmoothFxn
 end
 
 
+
 """
 All quadratic function can evaluate its Bregman Divergence or function 
 values at a point given its gradient and hence they are unified 
@@ -155,6 +156,9 @@ FastGenericQuadraticFunction = Union{
     FastImplicitAffineNormedSquared, DistToAffineSpaceSquared
 }
 
+
+
+
 # ==============================================================================
 # NONSMOOTH FUNCTIONS
 # ==============================================================================
@@ -173,17 +177,24 @@ function fxn_eval(::ZeroFunction, ::AbstractArray{Float64})::Number
     return 0
 end
 
-function prox(::ZeroFunction, ::Number, x::AbstractArray{Float64})::AbstractArray{Float64}
+function prox(
+    ::ZeroFunction, 
+    ::Number, 
+    x::AbstractArray{Float64}
+)::AbstractArray{Float64}
+    
     return x
 end
 
 function prox!(
-    ::ZeroFunction, ::Number, x::AbstractArray{Float64}, xx::AbstractArray{Float64}
+    ::ZeroFunction, ::Number, x::AbstractArray{Float64}, 
+    xx::AbstractArray{Float64}
 )::AbstractArray{Float64}
     xx .= x
     return xx 
 end
 
+# ------------------------------------------------------------------------------
 
 """
 Indicator function of the Positive Cone. 

@@ -41,7 +41,6 @@ function armijo_ls!(
         copy!(y_plus, x)
         y_plus .*= 1 - α
         y_plus .+= z
-
     yg_plus .= grad(f, y_plus)
     for _ in 1:53
         # x_plus .= prox(g, 1/L, y_plus - (1/L)*yg_plus) # Fast alternative:
@@ -49,7 +48,6 @@ function armijo_ls!(
         z .*= -1/L
         z .+= y_plus
         copy!(x_plus, prox(g, 1/L, z))
-        
         # xg_plus .= grad(f, x_plus) # Faster alternative
         copy!(xg_plus, grad(f, x_plus))
         # b = dot(yg_plus - xg_plus, y_plus - x_plus); # Fast alternative: 
@@ -186,8 +184,7 @@ function backtrack_ls!(
 
     for i in 0:53
         α = (α*sqrt(α^2 + 4(L/L⁺)) - α^2)/2
-        # copy!(y, α*v + (1 - α)*x)
-        
+        # copy!(y, α*v + (1 - α)*x) # faster alternative: 
         copy!(z, v)
         z .*= α
         copy!(y, x)
@@ -284,6 +281,7 @@ function inner_fista_runner(
             F⁺ = gradient_to_fxnval(f, x⁺ ,xg⁺) + g(x⁺)
             if F + ϵ < F⁺
                 # x⁺ .= prox(g, 1/(2L̄), x - (1/(2L̄))*xg)
+                # Speedy implementations: 
                 copy!(z2, xg)
                 z2 .*= -1/L̄
                 z2 .+= x
@@ -291,16 +289,16 @@ function inner_fista_runner(
                 G = L̄*norm(x⁺ - x)
             else
                 # x .= prox(g, 1/(2L̄), x⁺ - (1/(2L̄))*xg⁺)
+                # Speedy implementations: 
                 copy!(z2, xg⁺)
                 z2 .*= -1/L̄
                 z2 .+= x⁺
                 copy!(x, prox(g, 1/L̄, z2))
                 G = L̄*norm(x⁺ - x)
-                # x⁺ .= x
-                copy!(x⁺, x) # xg⁺ .= grad(f, x⁺)
+                copy!(x⁺, x)
+
             end
-            
-            copy!(xg⁺, grad(f, x⁺)) # xg⁺ .= grad(f, x⁺)
+            copy!(xg⁺, grad(f, x⁺)) # speed alternative for xg⁺ .= grad(f, x⁺)
             F⁺ = gradient_to_fxnval(f, x⁺, xg⁺) + g(x⁺)
         else
             if results_collector|> fxn_collect || 
@@ -310,7 +308,6 @@ function inner_fista_runner(
         end
         # Recording results here. ----------------------------------------------
         put_results!(results_collector, G, α, L, fxn_val=F⁺)
-        
         # check restart conditions here ----------------------------------------
         if alg_settings|>restart == 0
             restart_cond_met = G < tol
@@ -361,7 +358,6 @@ function fista(
     tol::Number=1e-8
 )::ResultsCollector 
     # MUTATING VARS
-    
     M = max_itr
     N = 128 # initial minimum restart period. 
     z = x0
@@ -465,11 +461,11 @@ function fista_sanity_check(
         L = L⁺
         copy!(z2, x⁺); z2 .-= x
         G = L*norm(z2)
+        # Fast implementation of  v⁺ =  x + (1/α)*(x⁺ - x) below: 
         copy!(v⁺, x⁺) 
         v⁺ .-= x
         v⁺ .*= 1/α
         v⁺ .+= x
-        # v⁺ =  x + (1/α)*(x⁺ - x) 
         F⁺ = gradient_to_fxnval(f, x⁺, xg⁺) + g(x⁺)
         put_results!(results_collector, G, α, L, fxn_val=F⁺)
         if G < tol

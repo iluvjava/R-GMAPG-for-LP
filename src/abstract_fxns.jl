@@ -1,5 +1,6 @@
 abstract type NsmoothFxn end
 
+
 function fxn_eval(
     ::NsmoothFxn, 
     ::AbstractArray{Float64}
@@ -34,8 +35,8 @@ function (this::NsmoothFxn)(
     return fxn_eval(this, x)
 end
 
-# ------------------------------------------------------------------------------
 
+# ------------------------------------------------------------------------------
 abstract type IndicFxn <: NsmoothFxn
 end
 
@@ -56,7 +57,6 @@ function prox(
 end
 
 # ------------------------------------------------------------------------------
-
 abstract type SmoothFxn end
 
 """
@@ -85,9 +85,9 @@ function (this::SmoothFxn)(x::AbstractArray{Float64})::Float64
     return fxn_eval(this, x)
 end
 
-# Interfacing with fast smooth function. 
+# ADAPTOR FUNCTION 
 function grad!(
-    this::FastSmoothFxn, 
+    this::SmoothFxn, 
     x::AbstractArray{Float64}, 
     xx::AbstractArray{Float64}
 )::AbstractArray{Float64}
@@ -116,7 +116,6 @@ function grad!(
 end
 
 # ------------------------------------------------------------------------------
-
 abstract type FastNsmoothFxn <: NsmoothFxn end
 
 """
@@ -134,7 +133,6 @@ function prox!(
 end
 
 # ------------------------------------------------------------------------------
-
 abstract type FastIndicFxn <: FastNsmoothFxn
 
 end

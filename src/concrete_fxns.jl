@@ -254,8 +254,32 @@ function fxn_eval(this::OneNorm, x::AbstractArray)::Number
     return abs(λ*x)
 end
 
-function prox(this::OneNorm, l::Number,x::AbstractArray)::AbstractArray
+function prox(
+    this::OneNorm, 
+    l::Number,
+    x::AbstractArray{Float64}
+)::AbstractArray{Float64}
     λ = this.lambda*l
     return @. sign(x)*max(abs(x) - t*λ, 0)    
+end
+
+struct FastOneNorm <: FastNsmoothFxn
+    lambda::Number
+    function NsmoothFxn(lambda::Number)
+        return new(lambda)
+    end
+end
+
+function fxn_eval(this::FastOneNorm, x::AbstractArray{Float64})::Number
+    throw("NOT IMPLEMENTED YET. ")
+end
+
+function prox!(
+    this::FastOneNorm,
+    l::Number, 
+    x::AbstractArray{Float64}, 
+    xx::AbstractArray{Float64}
+)::AbstractArray{Float64}
+    throw("NOT IMPLEMENTED YET")
 end
 

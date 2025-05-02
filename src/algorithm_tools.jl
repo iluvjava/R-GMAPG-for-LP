@@ -1,4 +1,3 @@
-
 """
 Controls different enhancement strategies used in the FISTA. 
 """
@@ -66,7 +65,6 @@ mutable struct ResultsCollector
     function ResultsCollector(fxn_collect::Bool=true)
         this = new()
         this.fxn_collect = fxn_collect
-
         this.fxn_values = Vector{Number}()
         this.last_iterate = nothing
         this.gradmap_values = Vector{Number}()

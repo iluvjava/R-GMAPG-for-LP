@@ -194,8 +194,7 @@ function prox!(
     return xx 
 end
 
-# ------------------------------------------------------------------------------
-
+# R plus indicator -------------------------------------------------------------
 """
 Indicator function of the Positive Cone. 
 """
@@ -238,6 +237,7 @@ function proj(this::IndicConeCrossed, x::AbstractArray)::AbstractArray
 end
 
 
+# λ|x| -------------------------------------------------------------------------
 """
 x |-> λ|x|
 """

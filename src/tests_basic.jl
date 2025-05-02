@@ -28,8 +28,14 @@ using Plots, Test, LinearAlgebra
 
     function basic_run_armijo()
         @info "RESULT 1 | Alamo Restart  | BT LS "
-        s = AlgoSettings(restart_strategy=2, line_search_strategy=1, monotone_strategy=2)
-        @time global RESULTS1 = fista(f, g, x0, max_itr=max_itr, tol=tol, alg_settings=s)
+        s = AlgoSettings(
+            restart_strategy=2, 
+            line_search_strategy=1, 
+            monotone_strategy=2
+        )
+        @time global RESULTS1 = fista(
+            f, g, x0, max_itr=max_itr, tol=tol, alg_settings=s
+        )
         # RESULT 1
         global plt1 = plot(
             1:(RESULTS1|>fxn_values|>length),
@@ -57,7 +63,9 @@ using Plots, Test, LinearAlgebra
     function basic_run_backtrack()
         @info "RESULT 2 | Chambolle's backtrack"
         s = AlgoSettings(line_search_strategy=1)
-        @time global RESULTS2 = fista(f, g, x0, max_itr=max_itr, tol=tol, alg_settings=s)
+        @time global RESULTS2 = fista(
+            f, g, x0, max_itr=max_itr, tol=tol, alg_settings=s
+        )
         
         # RESULT 2
         plot!(
@@ -85,7 +93,9 @@ using Plots, Test, LinearAlgebra
     function basic_run_armijo_beckmono()
         @info "RESULT 3 | Armijo | Bekc's Mono"
         s = AlgoSettings(line_search_strategy=0, monotone_strategy=1)
-        @time global RESULTS3 = fista(f, g, x0, max_itr=max_itr, alg_settings=s, tol=tol)
+        @time global RESULTS3 = fista(
+            f, g, x0, max_itr=max_itr, alg_settings=s, tol=tol
+        )
         
         # RESULT 3
         plot!(
@@ -113,7 +123,9 @@ using Plots, Test, LinearAlgebra
     function basic_run_backtrack_beckmono()
         @info "RESULT 4 | Chambolle's Backtrack | Beck's Monotone"
         s = AlgoSettings(line_search_strategy=1, monotone_strategy=1)
-        @time global RESULTS4 = fista(f, g, x0, max_itr=max_itr, alg_settings=s, tol=tol)
+        @time global RESULTS4 = fista(
+            f, g, x0, max_itr=max_itr, alg_settings=s, tol=tol
+        )
         # RESULT 4
         plot!(
             plt1,
@@ -140,7 +152,9 @@ using Plots, Test, LinearAlgebra
     function basic_run_backtrack_nesmono()
         @info "RESULT 5 | Chambolle's Backtrack | Nesterov's Monotone"
         s = AlgoSettings(line_search_strategy=1, monotone_strategy=2)
-        @time global RESULTS5 = fista(f, g, x0, max_itr=max_itr, alg_settings=s, tol=tol)
+        @time global RESULTS5 = fista(
+            f, g, x0, max_itr=max_itr, alg_settings=s, tol=tol
+        )
         
         # RESULTS 5
         plot!(

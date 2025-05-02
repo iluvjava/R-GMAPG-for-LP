@@ -63,11 +63,11 @@ abstract type SmoothFxn end
 Evaluate both gradient and function value at x. 
 """
 function fxn_eval(
-    ::SmoothFxn, 
+    this::SmoothFxn, 
     ::AbstractArray{Float64}
 )::Float64
     # IMPLEMENT THIS !
-    throw("Not implemented.")
+    throw("Not implemente for type of `$(typeof(this))`")
 end
 
 """
@@ -110,9 +110,12 @@ function grad!(
     ::AbstractArray{Float64}, 
     ::AbstractArray{Float64}
 )::AbstractArray{Float64}
-    # IMPLEMENT THIS !
-    
+    # IMPLEMENT THIS !    
     throw("Not implemented.")
+end
+
+function (this::FastSmoothFxn)(x::AbstractArray{Float64})::Float64
+    return fxn_eval(this, x)
 end
 
 # ------------------------------------------------------------------------------

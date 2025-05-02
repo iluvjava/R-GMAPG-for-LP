@@ -52,7 +52,7 @@ Implicitly represented via:
 ∇f(x) = A^TAx - A^Tb
 f(x) = (1/2)<x, ∇f(x) - A^Tb> + 1/2‖d‖^2 
 """
-struct FastImplicitAffineNormedSquared <:FastSmoothFxn
+struct FastImplicitAffineNormedSquared <: FastSmoothFxn
     adj_comp::Function # x -> transpos(A)(A(x)) 
     adj::Function  # x -> transpose(A)(x)
     d::Float64 # ‖b‖^2
@@ -87,7 +87,6 @@ function FastImplicitAffineNormedSquared(
             return mul!(xx, MT, x)
         end
     end
-
     adj_comp = let MTM = MTM 
         function(x, xx) return mul!(xx, MTM, x) end
     end
@@ -96,8 +95,8 @@ end
 
 function grad!(
     this::FastImplicitAffineNormedSquared, 
-    x::Vector{Float64}, 
-    xx::Vector{Float64}
+    x::AbstractVector{Float64}, 
+    xx::AbstractVector{Float64}
 )::Vector{Float64}
     ATA = this.adj_comp; ATb = this.c
     ATA(x, xx)
@@ -107,19 +106,21 @@ end
 
 function fxn_eval(
     this::FastImplicitAffineNormedSquared, 
-    x::Vector{Float64}
+    x::AbstractVector{Float64}
 )::Float64
     return (1/2)*(dot(x, grad!(this, x, similar(x))) - dot(x, this.c) + this.d)
 end
 
 function gradient_to_fxnval(
     this::FastImplicitAffineNormedSquared, 
-    x::Vector{Float64}, 
-    g::Vector{Float64}
+    x::AbstractVector{Float64}, 
+    g::AbstractVector{Float64}
 )::Float64
     return (1/2)*(dot(x, g) - dot(x, this.c) + this.d)
 end
 
+
+# The distance an affine subspace ----------------------------------------------
 """
 It's the function: 
 x -> min(z){‖x - z‖^2 : Az - b = 0}, where b is in rng(A). 
@@ -127,8 +128,6 @@ x -> min(z){‖x - z‖^2 : Az - b = 0}, where b is in rng(A).
 struct DistToAffineSpaceSquared <: FastNsmoothFxn
 
 end
-
-
 
 """
 All quadratic function can evaluate its Bregman Divergence or function 
@@ -157,12 +156,9 @@ FastGenericQuadraticFunction = Union{
 }
 
 
-
-
 # ==============================================================================
 # NONSMOOTH FUNCTIONS
 # ==============================================================================
-
 """
 A non-smooth function that is literally all zero, and it does nothing 
 mathematically.
@@ -204,12 +200,9 @@ struct IndicPositiveCone <: NsmoothFxn
     end
 end
 
-
 function prox(::IndicPositiveCone, x::AbstractArray)::AbstractArray
     return max.(x, 0)
 end
-
-
 
 """
 Indicator of (positive cone) × (whole space) × (negative cone)
@@ -241,38 +234,30 @@ end
 """
 x |-> λ|x|
 """
-struct OneNorm <:NsmoothFxn
+struct FastOneNorm <:FastNsmoothFxn
     lambda::Number
-    function NsmoothFxn(lambda::Number)
+    function FastOneNorm(lambda::Number)
+        @assert lambda > 0 "Lambda constant"*
+        " for FastOneNorm has to be strictly larger than zero. "
         return new(lambda)
     end
 end
 
 
-function fxn_eval(this::OneNorm, x::AbstractArray)::Number
-    λ = this.lambda
-    return abs(λ*x)
-end
-
 function prox(
-    this::OneNorm, 
+    this::FastOneNorm, 
     l::Number,
     x::AbstractArray{Float64}
 )::AbstractArray{Float64}
     λ = this.lambda*l
-    return @. sign(x)*max(abs(x) - t*λ, 0)    
+    return @. sign(x)*max(abs(x) - λ, 0)
 end
 
-struct FastOneNorm <: FastNsmoothFxn
-    lambda::Number
-    function NsmoothFxn(lambda::Number)
-        return new(lambda)
-    end
-end
 
 function fxn_eval(this::FastOneNorm, x::AbstractArray{Float64})::Number
-    throw("NOT IMPLEMENTED YET. ")
+    return (this.lambda*x) .|> abs |> sum
 end
+
 
 function prox!(
     this::FastOneNorm,
@@ -280,6 +265,15 @@ function prox!(
     x::AbstractArray{Float64}, 
     xx::AbstractArray{Float64}
 )::AbstractArray{Float64}
-    throw("NOT IMPLEMENTED YET")
+    λ = this.lambda*l
+    xx .= abs.(x)
+    xx .-= λ
+    for i in eachindex(xx)
+        if xx[i] < 0
+            xx[i] = 0
+        end
+        xx[i] = sign(x[i])*xx[i]
+    end
+    return xx
 end
 

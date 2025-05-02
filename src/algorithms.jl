@@ -16,52 +16,102 @@ function backtrack_ls(
     throw("Not implemented yet. ")
 end
 
-"""
-Specialize Armijo line search routine for quadratic function. 
-"""
-function armijo_ls!(
-    f::GenericQuadraticFunction, 
-    g::NsmoothFxn, 
-    L::Number, 
-    alpha::Number,
-    v::AbstractArray,
-    x::AbstractArray,
-    x_plus::AbstractArray, 
-    y_plus::AbstractArray,
-    xg_plus::AbstractArray,
-    yg_plus::AbstractArray,
-    z::AbstractArray; # for signaure consistency with fast implementations. 
-    kwargs...
-)::Tuple
-    α = alpha  
-    α = (1/2)*(α*sqrt(α^2 + 4) - α^2)
-    # y_plus .= α*v + (1 - α)*x
-        copy!(z, v)
-        z .*= α
-        copy!(y_plus, x)
-        y_plus .*= 1 - α
-        y_plus .+= z
-    yg_plus .= grad(f, y_plus)
-    for _ in 1:53
-        # x_plus .= prox(g, 1/L, y_plus - (1/L)*yg_plus) # Fast alternative:
-        copy!(z, yg_plus)
-        z .*= -1/L
-        z .+= y_plus
-        copy!(x_plus, prox(g, 1/L, z))
-        # xg_plus .= grad(f, x_plus) # Faster alternative
-        copy!(xg_plus, grad(f, x_plus))
-        # b = dot(yg_plus - xg_plus, y_plus - x_plus); # Fast alternative: 
-        b = dot(yg_plus, y_plus) - dot(yg_plus, x_plus)
-        b += -dot(xg_plus, y_plus) + dot(xg_plus, x_plus)
-        copy!(z, x_plus)
-        z .-= y_plus
-        if b <= L*dot(z, z)
-            break
-        end
-        L = 2*L
-    end
-    return L, α
-end
+# """
+# Specialize Armijo line search routine for quadratic function. 
+# """
+# function armijo_ls!(
+#     f::GenericQuadraticFunction, 
+#     g::NsmoothFxn, 
+#     L::Number, 
+#     alpha::Number,
+#     v::AbstractArray,
+#     x::AbstractArray,
+#     x_plus::AbstractArray, 
+#     y_plus::AbstractArray,
+#     xg_plus::AbstractArray,
+#     yg_plus::AbstractArray,
+#     z::AbstractArray; # for signaure consistency with fast implementations. 
+#     kwargs...
+# )::Tuple
+#     α = alpha  
+#     α = (1/2)*(α*sqrt(α^2 + 4) - α^2)
+#     # y_plus .= α*v + (1 - α)*x
+#         copy!(z, v)
+#         z .*= α
+#         copy!(y_plus, x)
+#         y_plus .*= 1 - α
+#         y_plus .+= z
+#     yg_plus .= grad(f, y_plus)
+#     for _ in 1:53
+#         # x_plus .= prox(g, 1/L, y_plus - (1/L)*yg_plus) # Fast alternative:
+#         copy!(z, yg_plus)
+#         z .*= -1/L
+#         z .+= y_plus
+#         copy!(x_plus, prox(g, 1/L, z))
+#         # xg_plus .= grad(f, x_plus) # Faster alternative
+#         copy!(xg_plus, grad(f, x_plus))
+#         # b = dot(yg_plus - xg_plus, y_plus - x_plus); # Fast alternative: 
+#         b = dot(yg_plus, y_plus) - dot(yg_plus, x_plus)
+#         b += -dot(xg_plus, y_plus) + dot(xg_plus, x_plus)
+#         copy!(z, x_plus)
+#         z .-= y_plus
+#         if b <= L*dot(z, z)
+#             break
+#         end
+#         L = 2*L
+#     end
+#     return L, α
+# end
+
+
+
+# """
+# Chambolle's back tracking LS without any strong convexity modifiers. 
+# Specialize for normed quadratic functions. 
+# """
+# function backtrack_ls!(
+#     f::GenericQuadraticFunction, 
+#     g::NsmoothFxn, 
+#     L::Number, 
+#     alpha::Number,
+#     v::AbstractArray{Float64},
+#     x::AbstractArray{Float64},
+#     x_plus::AbstractArray{Float64}, 
+#     y_plus::AbstractArray{Float64},
+#     xg_plus::AbstractArray{Float64},
+#     yg_plus::AbstractArray{Float64},
+#     z::AbstractArray{Float64};  # for signaure consistency with fast implementations. 
+#     l_min::Number,
+#     r::Number
+# )::Tuple
+#     L⁺ = max(L*r, l_min)
+#     α = alpha
+#     y = y_plus; y′ = yg_plus
+#     p = x_plus; p′ = xg_plus
+#     for i in 0:53
+#         α = (α*sqrt(α^2 + 4(L/L⁺)) - α^2)/2
+#         # copy!(y, α*v + (1 - α)*x)
+#         copy!(z, v)
+#         z .*= α
+#         copy!(y, x)
+#         y .*= (1 - α)
+#         y .+= z
+#         copy!(y′, grad(f, y))
+#         copy!(z, y′)
+#         z .*= -1/L⁺
+#         z .+= y 
+#         copy!(p, prox(g, 1/L⁺, z))
+#         copy!(p′, grad(f, p))
+#         b = dot(y′, y) - dot(y′, p) - dot(p′, y) + dot(p′, p)
+#         L⁺ = L⁺*2^i
+#         copy!(z, p)
+#         z .-= y;
+#         if b <= L⁺*dot(z, z)
+#             break
+#         end
+#     end
+#     return L⁺, α
+# end
 
 
 
@@ -70,8 +120,8 @@ Specialize armijo line search routine for fast quadratic and nonsmooth
 functions. 
 """
 function armijo_ls!(
-    f::FastGenericQuadraticFunction, # !! For fast function. 
-    g::FastNsmoothFxn, 
+    f::GenericQuadraticFunction, # !! For fast function. 
+    g::NsmoothFxn, 
     L::Number, 
     alpha::Number,
     v::Vector{Float64},
@@ -111,60 +161,11 @@ end
 
 
 """
-Chambolle's back tracking LS without any strong convexity modifiers. 
-Specialize for normed quadratic functions. 
+Chambolle's Backtracking line search for a generic quadratic function. 
 """
 function backtrack_ls!(
     f::GenericQuadraticFunction, 
     g::NsmoothFxn, 
-    L::Number, 
-    alpha::Number,
-    v::AbstractArray{Float64},
-    x::AbstractArray{Float64},
-    x_plus::AbstractArray{Float64}, 
-    y_plus::AbstractArray{Float64},
-    xg_plus::AbstractArray{Float64},
-    yg_plus::AbstractArray{Float64},
-    z::AbstractArray{Float64};  # for signaure consistency with fast implementations. 
-    l_min::Number,
-    r::Number
-)::Tuple
-    L⁺ = max(L*r, l_min)
-    α = alpha
-    y = y_plus; y′ = yg_plus
-    p = x_plus; p′ = xg_plus
-    for i in 0:53
-        α = (α*sqrt(α^2 + 4(L/L⁺)) - α^2)/2
-        # copy!(y, α*v + (1 - α)*x)
-        
-        copy!(z, v)
-        z .*= α
-        copy!(y, x)
-        y .*= (1 - α)
-        y .+= z
-
-        copy!(y′, grad(f, y))
-        copy!(z, y′)
-        z .*= -1/L⁺
-        z .+= y 
-        copy!(p, prox(g, 1/L⁺, z))
-        copy!(p′, grad(f, p))
-        b = dot(y′, y) - dot(y′, p) - dot(p′, y) + dot(p′, p)
-        L⁺ = L⁺*2^i
-        
-        copy!(z, p)
-        z .-= y;
-        if b <= L⁺*dot(z, z)
-            break
-        end
-    end
-    return L⁺, α
-end
-
-
-function backtrack_ls!(
-    f::FastGenericQuadraticFunction, 
-    g::FastNsmoothFxn, 
     L::Number, 
     alpha::Number,
     v::AbstractArray{Float64},
@@ -224,23 +225,23 @@ function inner_fista_runner(
     alg_settings::AlgoSettings, 
     results_collector::ResultsCollector, 
     tol::Number
-):: NTuple{4, Any}
+):: NTuple{5, Any}
     ls = alg_settings|>line_search == 0 ? armijo_ls! : backtrack_ls!
     ϵ = eps(typeof(x0[1]))
     L̄ = L
     ρ = 2^(-1/1024)
-    x⁺ = similar(x0); y⁺ = similar(x0)
-    x = similar(x0); y = similar(x0)
-    xg⁺ = similar(x0); yg⁺ = similar(x0)
-    xg = similar(x0); yg = similar(x0)
-    v = similar(x0); v⁺ = similar(x0)
+    x⁺ = similar(x0); y⁺ = similar(x0) # current iterates,
+    x = similar(x0); y = similar(x0)  # last iterates, 
+    xg⁺ = similar(x0); yg⁺ = similar(x0) # gradient at current iterates. 
+    xg = similar(x0); yg = similar(x0)  # gradient at last iterates 
+    v = similar(x0); v⁺ = similar(x0) # current and last iterate 
     z1 = similar(x0) # temporary storage
     z2 = similar(x0) # temporary storage. 
     
     # First iterates is just a proximal gradient step --------------------------
     if results_collector|> fxn_collect || 
        alg_settings|>monotone != 0 ||
-       alg_settings|>restart >= 2 
+       alg_settings|>restart == 2 
         F = f(x0) + g(x0)
         initial_results!(results_collector, x0, F)
     else
@@ -253,7 +254,10 @@ function inner_fista_runner(
         F = gradient_to_fxnval(f, x, xg) + g(x)
     end
     α = 1; k = 0
-    G = L*norm(x - x0)
+    # G = L*norm(x - x0)
+    copy!(z2, x0)
+    z2 .-= x
+    G = L*norm(z2)
     put_results!(results_collector, G, α ,L, fxn_val=F)
     restart_cond_met = false
     Fs = results_collector.fxn_values
@@ -268,37 +272,48 @@ function inner_fista_runner(
         L = L⁺
         copy!(z2, x⁺)
         z2 .-= y⁺ 
-        L̄ = max(L, L̄); G = L*norm(z2)
-        copy!(v⁺, x⁺); v⁺ .-= x; v⁺ .*= 1/α; v⁺ .+= x # v⁺ = x + (1/α)*(x⁺ - x) 
+        L̄ = max(L, L̄)
+        G = L*norm(z2)
+        # v⁺ = x + (1/α)*(x⁺ - x) Fast implementation: 
+        copy!(v⁺, x⁺)
+        v⁺ .-= x 
+        v⁺ .*= 1/α 
+        v⁺ .+= x 
         # Monotone enhancement here. -------------------------------------------
         if alg_settings|>monotone == 1
             F⁺ = gradient_to_fxnval(f, x⁺, xg⁺) + g(x⁺)
             if F⁺ > F + ϵ
-                copy!(x⁺, x) # x⁺ .= x
+                copy!(x⁺, x)
                 F⁺ = F
             end
         elseif alg_settings|>monotone == 2
             F⁺ = gradient_to_fxnval(f, x⁺ ,xg⁺) + g(x⁺)
             if F + ϵ < F⁺
-                # x⁺ .= prox(g, 1/(2L̄), x - (1/(2L̄))*xg)
-                # Speedy implementations: 
+                # x⁺ = prox(g, 1/(2L̄), x - (1/(2L̄))*xg)
                 copy!(z2, xg)
                 z2 .*= -1/L̄
                 z2 .+= x
-                copy!(x⁺, prox(g, 1/L̄, z2))
-                G = L̄*norm(x⁺ - x)
+                # x⁺ = prox(g, 1/L̄, z2))
+                prox!(g, 1/L̄, z2, x⁺)
+                # G = L̄*norm(x - x⁺)
+                copy!(z2, x⁺)
+                z2 .-= x
+                G = L̄*norm(z2)  
             else
-                # x .= prox(g, 1/(2L̄), x⁺ - (1/(2L̄))*xg⁺)
-                # Speedy implementations: 
+                # x = prox(g, 1/(2L̄), x⁺ - (1/(2L̄))*xg⁺)
                 copy!(z2, xg⁺)
                 z2 .*= -1/L̄
                 z2 .+= x⁺
-                copy!(x, prox(g, 1/L̄, z2))
-                G = L̄*norm(x⁺ - x)
+                # x = prox(g, 1/L̄, z2)
+                prox!(g, 1/L̄, z2, x)
+                # G = L̄*norm(x⁺ - x)
+                copy!(z2, x⁺)
+                z2 .-= x
+                G = L̄*norm(z2)
                 copy!(x⁺, x)
-
             end
-            copy!(xg⁺, grad(f, x⁺)) # speed alternative for xg⁺ .= grad(f, x⁺)
+            # copy!(xg⁺, grad(f, x⁺)) # speed alternative for xg⁺ .= grad(f, x⁺)
+            grad!(f, x⁺, xg⁺)
             F⁺ = gradient_to_fxnval(f, x⁺, xg⁺) + g(x⁺)
         else
             if results_collector|> fxn_collect || 
@@ -324,8 +339,7 @@ function inner_fista_runner(
             restart_cond_met = k >= N &&
             (Fs[end - m] - Fs[end])/(Fs[end - k] - Fs[end - m]) <= exp(-1) &&
             F⁺ <= Fs[end - k]
-
-            # Exit anyway and let the outer loop break. 
+            # Exit anyway if it reached tolerance already. 
             restart_cond_met |= G < tol
         end
         x, x⁺ = x⁺, x
@@ -337,7 +351,7 @@ function inner_fista_runner(
     end
     # store the result! 
     last_iterate!(results_collector, x)
-    return F, x, G, k
+    return F, x, G, k, L̄
 end
 
 
@@ -353,7 +367,7 @@ function fista(
     L::Number=1,
     alg_settings::AlgoSettings=AlgoSettings(), 
     results_collector::ResultsCollector=ResultsCollector(),
-    min_ratio=0.1,
+    min_ratio=0.1,  # Backtracking  line search
     max_itr::Number=1000,
     tol::Number=1e-8
 )::ResultsCollector 
@@ -361,11 +375,11 @@ function fista(
     M = max_itr
     N = 128 # initial minimum restart period. 
     z = x0
-    j = 0
-    R = Vector{Number}()
+    j = 0  # counter for Alamo's function value restarts. 
+    R = Vector{Number}() # for Alamo's function value restarts
     while M >= 0
         if alg_settings|>restart == 0
-            F, z, G, k = inner_fista_runner( 
+            F, z, G, k, _ = inner_fista_runner( 
                 f, g, z, L, min_ratio, M, M, alg_settings,
                 results_collector, 
                 tol
@@ -374,20 +388,22 @@ function fista(
             break
         elseif alg_settings|>restart == 1
             # Gradient Heuristic restart. 
-            F, z, G, k = inner_fista_runner( 
+            F, z, G, k, L⁺ = inner_fista_runner( 
                 f, g, z, L, min_ratio, N, M, alg_settings,
                 results_collector, 
                 tol
             )
             M -= k
             N = max(N, k)
+            L = L⁺
         else
-            F, z, G, k = inner_fista_runner( 
+            F, z, G, k, L⁺ = inner_fista_runner( 
                 f, g, z, L, min_ratio, N, M, alg_settings,
                 results_collector, 
                 tol
             )
             M -= k
+            L = L⁺
             if j == 0                
                 N = max(N, k)
                 j += 1

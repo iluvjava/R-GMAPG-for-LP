@@ -6,13 +6,14 @@ include("algorithms.jl")
 using Plots, Test, LinearAlgebra
 
 @testset "Basic Testing" begin
-    global N = 1024
-    global A = LinRange(1/N, 1, N)|>collect
+    global N = 256
+    global A = randn(N, N)
     global b = ones(N); b[1] = 0
-    global f = ImplicitAffineNormedSquared(x -> A.*x, y -> A.*y, b)
-    x0 = A|>reverse
+    # global f = ImplicitAffineNormedSquared(x -> A*x, y -> A*y, b)
+    global f = FastImplicitAffineNormedSquared(A, b)
+    x0 = randn(N)
     g = ZeroFunction()
-    max_itr = 2^16
+    max_itr = 2^14
     tol = 2^(-20)
 
     function visualize_results(c::ResultsCollector)::Nothing
@@ -66,7 +67,6 @@ using Plots, Test, LinearAlgebra
         @time global RESULTS2 = fista(
             f, g, x0, max_itr=max_itr, tol=tol, alg_settings=s
         )
-        
         # RESULT 2
         plot!(
             plt1,
@@ -155,7 +155,6 @@ using Plots, Test, LinearAlgebra
         @time global RESULTS5 = fista(
             f, g, x0, max_itr=max_itr, alg_settings=s, tol=tol
         )
-        
         # RESULTS 5
         plot!(
             plt1, 
